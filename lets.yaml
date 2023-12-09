@@ -1,0 +1,8 @@
+shell: bash
+
+commands:
+  lox:
+    cmd: |
+      cmake -S . -B ./build
+      cmake --build ./build
+      ./build/clox
