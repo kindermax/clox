@@ -13,6 +13,8 @@ set(SOURCE_FILES
     src/debug.c
     src/value.h
     src/value.c
+    src/vm.h
+    src/vm.c
 )
 
 add_executable("${PROJECT_NAME}" ${SOURCE_FILES})
