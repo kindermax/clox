@@ -16,6 +16,10 @@
         "format": "c",
         "memory.h": "c",
         "value.h": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "ratio": "cpp",
+        "vm.h": "c",
+        "istream": "c",
+        "*.tcc": "c"
     }
 }
