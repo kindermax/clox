@@ -8,6 +8,7 @@
 
 typedef struct {
   Chunk* chunk;
+  // instructor pointer
   uint8_t* ip;
   Value stack[STACK_MAX];
   Value* stackTop;

@@ -20,6 +20,12 @@
         "ratio": "cpp",
         "vm.h": "c",
         "istream": "c",
-        "*.tcc": "c"
+        "*.tcc": "c",
+        "scanner.h": "c",
+        "compiler.h": "c",
+        "streambuf": "c",
+        "cstdint": "c",
+        "__locale": "c",
+        "locale": "c"
     }
 }
