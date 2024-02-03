@@ -26,6 +26,18 @@
         "streambuf": "c",
         "cstdint": "c",
         "__locale": "c",
-        "locale": "c"
+        "locale": "c",
+        "__node_handle": "c",
+        "atomic": "c",
+        "bitset": "c",
+        "__memory": "c",
+        "limits": "c",
+        "optional": "c",
+        "system_error": "c",
+        "tuple": "c",
+        "charconv": "c",
+        "functional": "c",
+        "type_traits": "c",
+        "utility": "c"
     }
 }
