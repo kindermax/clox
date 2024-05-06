@@ -38,6 +38,14 @@
         "charconv": "c",
         "functional": "c",
         "type_traits": "c",
-        "utility": "c"
+        "utility": "c",
+        "cstring": "c",
+        "algorithm": "c",
+        "object.h": "c",
+        "__tuple": "c",
+        "variant": "c",
+        "compare": "c",
+        "complex": "c",
+        "ios": "c"
     }
 }

@@ -22,6 +22,8 @@ set(SOURCE_FILES
     src/compiler.c
     src/scanner.h
     src/scanner.c
+    src/object.h
+    src/object.c
 )
 
 add_executable("${PROJECT_NAME}" ${SOURCE_FILES})
