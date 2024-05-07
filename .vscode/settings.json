@@ -46,6 +46,7 @@
         "variant": "c",
         "compare": "c",
         "complex": "c",
-        "ios": "c"
+        "ios": "c",
+        "table.h": "c"
     }
 }
