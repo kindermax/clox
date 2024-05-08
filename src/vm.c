@@ -31,6 +31,7 @@ static void runtimeError(const char* format, ...) {
 void initVM() {
   resetStack();
   vm.objects = NULL;
+
   initTable(&vm.globals);
   initTable(&vm.strings);
 }
@@ -87,6 +88,8 @@ static InterpretResult run() {
       double a = AS_NUMBER(pop()); \
       push(valueType(a op b)); \
     } while (false)
+
+  for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
     printf("          ");
     for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
@@ -101,42 +104,6 @@ static InterpretResult run() {
 
     uint8_t instruction;
     switch (instruction = READ_BYTE()) {
-      case OP_GREATER:  BINARY_OP(BOOL_VAL, >); break;
-      case OP_LESS:     BINARY_OP(BOOL_VAL, <); break;
-      case OP_ADD: {
-        if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
-          concatenate();
-        } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
-          double b = AS_NUMBER(pop());
-          double a = AS_NUMBER(pop());
-          push(NUMBER_VAL(a + b));
-        } else {
-          runtimeError("Operands must be two numbers or two strings.");
-          return INTERPRET_RUNTIME_ERROR;
-        }
-        break;
-      };
-      case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
-      case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
-      case OP_DIVIDE:   BINARY_OP(NUMBER_VAL, /); break;
-      case OP_NOT:
-        push(BOOL_VAL(isFalsey(pop())));
-        break;
-      case OP_NEGATE:
-        if (!IS_NUMBER(peek(0))) {
-          runtimeError("Operand must be a number.");
-          return INTERPRET_RUNTIME_ERROR;
-        }
-        push(NUMBER_VAL(-AS_NUMBER(pop())));
-        break;
-      case OP_PRINT:
-        printValue(pop());
-        printf("\n");
-        break;
-      case OP_RETURN: {
-        // Exit interpreter
-        return INTERPRET_OK;
-      }
       case OP_CONSTANT: {
         Value constant = READ_CONSTANT();
         push(constant);
@@ -159,15 +126,13 @@ static InterpretResult run() {
       case OP_DEFINE_GLOBAL: {
         ObjString* name = READ_STRING();
         tableSet(&vm.globals, name, peek(0));
-        printf("Printing globals\n");
-        tablePrint(&vm.globals);
         pop();
         break;
       }
       case OP_SET_GLOBAL: {
         ObjString* name = READ_STRING();
         if (tableSet(&vm.globals, name, peek(0))) {
-          tableDelete(&vm.globals, name); 
+          tableDelete(&vm.globals, name);
           runtimeError("Undefined variable '%s'.", name->chars);
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -179,6 +144,45 @@ static InterpretResult run() {
         push(BOOL_VAL(valuesEqual(a, b)));
         break;
       }
+      case OP_GREATER:  BINARY_OP(BOOL_VAL, >); break;
+      case OP_LESS:     BINARY_OP(BOOL_VAL, <); break;
+      case OP_ADD: {
+        if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
+          concatenate();
+        } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+          double b = AS_NUMBER(pop());
+          double a = AS_NUMBER(pop());
+          push(NUMBER_VAL(a + b));
+        } else {
+          runtimeError(
+              "Operands must be two numbers or two strings.");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        break;
+      }
+      case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
+      case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
+      case OP_DIVIDE:   BINARY_OP(NUMBER_VAL, /); break;
+      case OP_NOT:
+        push(BOOL_VAL(isFalsey(pop())));
+        break;
+      case OP_NEGATE:
+        if (!IS_NUMBER(peek(0))) {
+          runtimeError("Operand must be a number.");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        push(NUMBER_VAL(-AS_NUMBER(pop())));
+        break;
+      case OP_PRINT: {
+        printValue(pop());
+        printf("\n");
+        break;
+      }
+      case OP_RETURN: {
+        // Exit interpreter.
+        return INTERPRET_OK;
+      }
+    }
   }
 
 #undef READ_BYTE
