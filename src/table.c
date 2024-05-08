@@ -84,15 +84,6 @@ bool tableSet(Table* table, ObjString* key, Value value) {
     return isNewKey;
 }
 
-void tablePrint(Table* table) {
-    for (int i = 0; i < table->capacity; i++) {
-        Entry* entry = &table->entries[i];
-        if (entry->key != NULL) {
-            printf("Entry(%s=%s)\n", entry->key->chars, AS_CSTRING(entry->value));
-        }
-    }
-}
-
 void tableAddAll(Table* from, Table* to) {
     for (int i = 0; i < from->capacity; i++) {
         Entry* entry = &from->entries[i];
@@ -127,7 +118,7 @@ bool tableGet(Table* table, ObjString* key, Value* value) {
     if (table->count == 0) return false;
 
     Entry* entry = findEntry(table->entries, table->capacity, key);
-    if (entry->key != NULL) return false;
+    if (entry->key == NULL) return false;
 
     *value = entry->value;
     return true;
@@ -137,7 +128,7 @@ bool tableDelete(Table* table, ObjString* key) {
     if (table->count == 0) return false;
 
     Entry* entry = findEntry(table->entries, table->capacity, key);
-    if (entry->key != NULL) return false;
+    if (entry->key == NULL) return false;
 
     // Place a tombstone in the entry.
     entry->key = NULL;
