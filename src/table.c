@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "memory.h"
 #include "object.h"
@@ -81,6 +82,15 @@ bool tableSet(Table* table, ObjString* key, Value value) {
     entry->key = key;
     entry->value = value;
     return isNewKey;
+}
+
+void tablePrint(Table* table) {
+    for (int i = 0; i < table->capacity; i++) {
+        Entry* entry = &table->entries[i];
+        if (entry->key != NULL) {
+            printf("Entry(%s=%s)\n", entry->key->chars, AS_CSTRING(entry->value));
+        }
+    }
 }
 
 void tableAddAll(Table* from, Table* to) {

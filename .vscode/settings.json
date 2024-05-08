@@ -47,6 +47,9 @@
         "compare": "c",
         "complex": "c",
         "ios": "c",
-        "table.h": "c"
+        "table.h": "c",
+        "common.h": "c",
+        "stdio.h": "c",
+        "random": "c"
     }
 }

@@ -7,6 +7,8 @@
 #include "debug.h"
 #include "vm.h"
 
+// TODO: add REPL history
+
 // Reads a line from stdin and interprets it.
 static void repl() {
   char line[1024];

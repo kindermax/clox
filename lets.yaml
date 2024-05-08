@@ -2,5 +2,5 @@ shell: bash
 
 commands:
   lox:
-    cmd: |
-      cmake -S . -B ./build && cmake --build ./build && ./build/clox
+    description: Build and run the Lox interpreter
+    cmd: cmake -S . -B ./build && cmake --build ./build && ./build/clox
