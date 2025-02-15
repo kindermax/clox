@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.yaml": "yaml",
         "__bit_reference": "c",
         "__hash_table": "c",
         "__split_buffer": "c",
@@ -50,6 +51,7 @@
         "table.h": "c",
         "common.h": "c",
         "stdio.h": "c",
-        "random": "c"
+        "random": "c",
+        "stdbool.h": "c"
     }
 }

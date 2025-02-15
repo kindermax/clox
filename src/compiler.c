@@ -42,11 +42,18 @@ typedef struct {
 
 typedef struct {
     Token name;
-    int depth; //< How deep in scope the variable is. 0 is global, 1 is first block, etc.
+    int depth; // How deep in scope the variable is. 0 is global, 1 is first block, etc.
+    bool isCaptured;
 } Local;
 
+typedef struct {
+    // index stores which local slot the upvalue is capturing.
+    uint8_t index;
+    bool isLocal;
+} Upvalue;
+
 /**
- * @brief Used for determining top-level code vs body of function code
+ * Used for determining top-level code vs body of function code
  */
 typedef enum {
     TYPE_FUNCTION,
@@ -59,8 +66,9 @@ typedef struct Compiler {
     FunctionType type;
 
     Local locals[UINT8_COUNT];
-    int localCount; //< How many locals are in scope.
-    int scopeDepth; //< Number of blocks surrounding the current part of code we're compiling.
+    int localCount; // How many locals are in scope.
+    Upvalue upvalues[UINT8_COUNT];
+    int scopeDepth; // Number of blocks surrounding the current part of code we're compiling.
 } Compiler;
 
 Parser parser;
@@ -186,7 +194,7 @@ static void emitReturn() {
 }
 
 /**
- * @brief Add a constant to the constant table and make sure we don't have too many
+ * Add a constant to the constant table and make sure we don't have too many
  * @param value constant to add
  * @return the index of where we added the constant
  */
@@ -205,7 +213,7 @@ static void emitConstant(Value value) {
 }
 
 /**
- * @brief Update the placeholder 0xff in the jump target with the bytecode to jump to
+ * Update the placeholder 0xff in the jump target with the bytecode to jump to
  * When you see this, think "have the offset passed in be where I want the jump to end up."
  * @param offset 
  */
@@ -239,6 +247,7 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
     local->depth = 0;
     local->name.start = "";
     local->name.length = 0;
+    local->isCaptured = false;
 }
 
 static ObjFunction* endCompiler() {
@@ -266,7 +275,11 @@ static void endScope() {
     // Get rid of all variables at this scope when we leave it.
     while (current->localCount > 0 &&
            current->locals[current->localCount -1].depth > current->scopeDepth) {
-        emitByte(OP_POP);
+        if (current->locals[current->localCount - 1].isCaptured) {
+            emitByte(OP_CLOSE_UPVALUE);
+        } else {
+            emitByte(OP_POP);
+        }
         current->localCount--;
     }
 }
@@ -288,7 +301,7 @@ static bool identifiersEqual(Token* a, Token* b) {
 }
 
 /**
- * @brief Walk backwards through our compiler variables trying to find the most recent one.
+ * Walk backwards through our compiler variables trying to find the most recent one.
  * If found, we return where it's at in the array, which should mirror the VM's stack at runtime.
  * By going backwards, we enable variable shadowing for newer variables with the same name to match before
  * older ones.
@@ -311,8 +324,45 @@ static int resolveLocal(Compiler* compiler, Token* name) {
     return -1; // Assume global variable
 }
 
+static int addUpvalue(Compiler* compiler, uint8_t index, bool isLocal) {
+    int upvalueCount = compiler->function->upvalueCount;
+
+    for (int i = 0; i < upvalueCount; i++) {
+        Upvalue* upvalue = &compiler->upvalues[i];
+        if (upvalue->index == index && upvalue->isLocal == isLocal) {
+          return i;
+        }
+    }
+
+    if (upvalueCount == UINT8_COUNT) {
+        error("Too many closure variables in function.");
+        return 0;
+    }
+
+    compiler->upvalues[upvalueCount].isLocal = isLocal;
+    compiler->upvalues[upvalueCount].index = index;
+    return compiler->function->upvalueCount++;
+}
+
+static int resolveUpvalue(Compiler* compiler, Token* name) {
+    if (compiler->enclosing == NULL) return -1;
+
+    int local = resolveLocal(compiler->enclosing, name);
+    if (local != -1) {
+      compiler->enclosing->locals[local].isCaptured = true;
+      return addUpvalue(compiler, (uint8_t)local, true);
+    }
+
+    int upvalue = resolveUpvalue(compiler->enclosing, name);
+    if (upvalue != -1) {
+        return addUpvalue(compiler, (uint8_t)upvalue, false);
+    }
+
+    return -1;
+}
+
 /**
- * @brief Add a local variable to the compiler's 'locals' array.
+ * Add a local variable to the compiler's 'locals' array.
  * @param name Name of variable to store.
  */
 static void addLocal(Token name) {
@@ -323,10 +373,11 @@ static void addLocal(Token name) {
     Local* local = &current->locals[current->localCount++];
     local->name = name;
     local->depth = -1;
+    local->isCaptured = false;
 }
 
 /**
- * @brief Declaring a local variable tells the compiler that a variable exists and track it.
+ * Declaring a local variable tells the compiler that a variable exists and track it.
  */
 static void declareVariable() {
     if (current->scopeDepth == 0 ) return; // Break out of this for global variables. Local only!
@@ -349,7 +400,7 @@ static void declareVariable() {
 }
 
 /**
- * @brief Parse a variable, which is the identifier after the var or fun keyword. Store its name in constants table.
+ * Parse a variable, which is the identifier after the var or fun keyword. Store its name in constants table.
  * We break early here if we're not doing a global lookup.
  * @param errorMessage 
  * @return index of where the global name was added in constant table
@@ -364,7 +415,7 @@ static uint8_t parseVariable(const char* errorMessage) {
 }
 
 /**
- * @brief Mark a variable as initalized, setting its depth to the current scope depth.
+ * Mark a variable as initalized, setting its depth to the current scope depth.
  */
 static void markInitialized() {
     // If called from a global function, we break early.
@@ -382,7 +433,7 @@ static void defineVariable(uint8_t global) {
 }
 
 /**
- * @brief returns number of arguments for a function call
+ * returns number of arguments for a function call
 */
 static uint8_t argumentList() {
     uint8_t argCount = 0;
@@ -400,7 +451,7 @@ static uint8_t argumentList() {
 }
 
 /**
- * @brief AND handler. If left operand (already at top of stack) is false, we skip over the right part.
+ * AND handler. If left operand (already at top of stack) is false, we skip over the right part.
  * @param canAssign 
  */
 static void and_(bool canAssign) {
@@ -452,7 +503,7 @@ static void literal(bool canAssign) {
 }
 
 /**
- * @brief After consuming a (, recurse into expression until we hit )
+ * After consuming a (, recurse into expression until we hit )
  */
 static void grouping(bool canAssign) {
     expression();
@@ -487,12 +538,15 @@ static void namedVariable(Token name, bool canAssign) {
     if (arg != -1) {
         getOp = OP_GET_LOCAL;
         setOp = OP_SET_LOCAL;
+    } else if ((arg = resolveUpvalue(current, &name)) != -1) {
+        getOp = OP_GET_UPVALUE;
+        setOp = OP_SET_UPVALUE;
     } else {
         arg = identifierConstant(&name);
         getOp = OP_GET_GLOBAL;
         setOp = OP_SET_GLOBAL;
     }
-    
+
     // If we detect a = after the variable name, we're setting, not getting.
     if (canAssign && match(TOKEN_EQUAL)) {
         expression();
@@ -521,7 +575,7 @@ static void unary(bool canAssign) {
 }
 
 /**
- * @brief Table of token rules to know what prefix and infix functions to call, and what precendence they have
+ * Table of token rules to know what prefix and infix functions to call, and what precendence they have
  */
 ParseRule rules[] = {
     [TOKEN_LEFT_PAREN]      =   {grouping,  call,   PREC_CALL},
@@ -567,7 +621,7 @@ ParseRule rules[] = {
 };
 
 /**
- * @brief Consume the next token, look up its prefix function and run it
+ * Consume the next token, look up its prefix function and run it
  *        Then recurse into infix operators until we're done.
  * @param precedence 
  */
@@ -617,7 +671,7 @@ static void varDeclaration() {
 }
 
 /**
- * @brief An expression, followed by a semicolon.
+ * An expression, followed by a semicolon.
  */
 static void expressionStatement() {
     expression();
@@ -726,8 +780,12 @@ static void function(FunctionType type) {
     block();
 
     ObjFunction* function = endCompiler();
-    emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function)));
+    emitBytes(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
 
+    for (int i = 0; i < function->upvalueCount; i++) {
+        emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
+        emitByte(compiler.upvalues[i].index);
+    }
 }
 
 static void funDeclaration() {
@@ -789,7 +847,7 @@ static void synchronize() {
             case TOKEN_PRINT:
             case TOKEN_RETURN:
                 return;
-            
+
             default:
                 ; // Do nothing.
         }
@@ -845,7 +903,7 @@ ObjFunction* compile(const char* source) {
     while (!match(TOKEN_EOF)) {
         declaration();
     }
-    
+
     ObjFunction* function = endCompiler();
 
     // Return false if error occured
