@@ -12,3 +12,8 @@ Based on https://craftinginterpreters.com
 ## Test
 
 `lets test`
+
+
+## Build
+
+`lets build` builds using CMake

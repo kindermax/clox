@@ -4,9 +4,12 @@ commands:
   lox:
     description: Build and run the Lox interpreter
     cmd: cmake -S . -B ./build && cmake --build ./build && ./build/clox
-  
+
   lox-file:
     description: Build and run the Lox interpreter with a file
     options: |
       Usage: lets lox-file <file>
     cmd: cmake -S . -B ./build && cmake --build ./build && ./build/clox ./examples/${LETSOPT_FILE}
+
+  build:
+    cmd: cmake -S . -B build && cmake --build build
