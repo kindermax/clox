@@ -52,6 +52,7 @@
         "common.h": "c",
         "stdio.h": "c",
         "random": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "typeinfo": "c"
     }
 }
